@@ -1,16 +1,8 @@
 # Ma bibliothèque — version Android (APK)
 
-Application Android pour garder une trace des **séries**, **articles** et **vidéos** que tu regardes ou lis : titre, type, auteur/chaîne/plateforme, statut, note de 0 à 5, tags et petit avis. La recherche, les filtres et les statistiques sont aussi de la partie.
+Application Android pour garder une trace des **séries**, **articles** et **vidéos** que tu regardes ou lis : titre, type, statut, **informations** (texte libre) et **résumé**. La recherche, les filtres et les statistiques sont aussi de la partie.
 
-## Aperçu
-
-Écran principal (données d'exemple) :
-
-![Écran principal](apercus/ecran.png)
-
-Formulaire d'ajout / modification :
-
-![Formulaire](apercus/formulaire.png)
+Les anciennes fiches (avec auteur, note, tags et avis) restent compatibles : les tags deviennent le texte d'Informations, l'avis devient le Résumé.
 
 ## À savoir avant de commencer
 
@@ -56,7 +48,7 @@ bibliotheque-android/
 ## Étape 2 — Envoyer les fichiers
 
 1. Sur la page du dépôt, clique sur **Add file** → **Upload files**.
-2. Ouvre le dossier `bibliotheque-android` sur ton PC. Sélectionne **tout** (`main.py`, `donnees.py`, `buildozer.spec`, `build-apk.yml`, `LISEZMOI.md`, le dossier `apercus` et le dossier `.github`), puis glisse **le contenu** dans la zone de dépôt — pas le dossier `bibliotheque-android` lui-même, sinon GitHub crée un sous-dossier et la compilation ne part pas.
+2. Ouvre le dossier `bibliotheque-android` sur ton PC. Sélectionne **tout** (`main.py`, `donnees.py`, `buildozer.spec`, `build-apk.yml`, `LISEZMOI.md` et le dossier `.github`), puis glisse **le contenu** dans la zone de dépôt — pas le dossier `bibliotheque-android` lui-même, sinon GitHub crée un sous-dossier et la compilation ne part pas.
 3. Vérifie que `.github/workflows/build-apk.yml` apparaît dans la liste.
 4. Clique sur **Commit changes**.
 
@@ -89,9 +81,10 @@ bibliotheque-android/
 - **+ Ajouter un contenu** : ouvre la fiche (seul le titre est obligatoire).
 - **Modifier** sur une fiche : change ce que tu veux, puis **Enregistrer**.
 - **Supprimer** dans la fiche (une confirmation est demandée).
-- **Note** : fais glisser le curseur de 0 à 5 (0 = non noté).
+- **Informations** : texte libre (thèmes, contexte, liens, détails…).
+- **Résumé** : ton avis en quelques lignes.
 - **Recherche** : tape un mot ; **filtres Type / Statut** pour trier.
-- **Statistiques** en bas : nombre de contenus, terminés, note moyenne.
+- **Statistiques** en bas : nombre de contenus et nombre de terminés.
 
 ## Où sont mes données ?
 
@@ -106,6 +99,8 @@ Elles sont enregistrées dans un fichier JSON **privé de l'application**, sur l
 3. Installe le nouvel APK **par-dessus** l'ancien. Si Android refuse (« application non installée »), il faudra désinstaller l'ancienne version… et tes données seront perdues : dans ce cas, ne désinstalle qu'après avoir ajouté la sauvegarde.
 
 ## Si la compilation échoue
+
+La compilation utilise des versions épinglées volontairement (buildozer 1.5.0, python-for-android v2024.01.21, Python 3.11) : Kivy 2.3 ne supporte pas encore Python 3.14, qui est la version utilisée par défaut en 2026. Ne « mets pas à jour » ces versions sans raison.
 
 Ouvre l'exécution rouge, clique sur l'étape « Construire l'APK », et envoie-moi les **20 dernières lignes** du journal : je corrige la configuration.
 

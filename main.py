@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Ma bibliothèque — version Android (Kivy).
 
-Mêmes champs que la version pour ordinateur : titre, type, auteur/plateforme,
-statut, note (curseur de 0 à 5), tags et petit avis.
+Champs : titre, type, statut, informations (texte libre) et résumé.
+Les anciennes fiches (auteur, note, tags, avis) restent compatibles : les tags
+deviennent « Informations », l'avis devient « Résumé ».
 
 Les données sont enregistrées dans un fichier JSON privé de l'application
 (dossier « user_data_dir »). Aucune connexion Internet n'est nécessaire.
@@ -23,25 +24,19 @@ from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.scrollview import ScrollView
-from kivy.uix.slider import Slider
 from kivy.uix.spinner import Spinner
 from kivy.uix.textinput import TextInput
 
-from donnees import STATUTS, TYPES, charger, normaliser_tags, sauvegarder
+from donnees import STATUTS, TYPES, charger, sauvegarder
 
 FOND = (0.09, 0.10, 0.13, 1)
 CARTE = (0.15, 0.17, 0.22, 1)
 CHAMP = (0.17, 0.19, 0.24, 1)
 TEXTE = (0.95, 0.96, 0.98, 1)
 GRIS = (0.63, 0.66, 0.72, 1)
+RESUME = (0.80, 0.82, 0.86, 1)
 ACCENT = (0.30, 0.55, 1.0, 1)
 ROUGE = (0.88, 0.30, 0.30, 1)
-
-
-def note_texte(note):
-    """Renvoie « 4/5 » ou « non noté »."""
-    note = int(note or 0)
-    return f"{note}/5" if note else "non noté"
 
 
 def etiquette(contenu, taille, couleur, hauteur, centree=False, couper=False):
@@ -66,13 +61,13 @@ def etiquette(contenu, taille, couleur, hauteur, centree=False, couper=False):
 
 
 class Carte(BoxLayout):
-    """Une ligne de la bibliothèque : texte à gauche, bouton « Modifier »."""
+    """Une ligne de la bibliothèque : titre, type, informations, résumé."""
 
     def __init__(self, contenu, ouvrir, **kwargs):
         super().__init__(
             orientation="horizontal",
             size_hint_y=None,
-            height=dp(96),
+            height=dp(144),
             padding=[dp(10), dp(8)],
             spacing=dp(6),
             **kwargs,
@@ -85,12 +80,11 @@ class Carte(BoxLayout):
 
         colonne = BoxLayout(orientation="vertical", spacing=dp(1))
         colonne.add_widget(
-            etiquette(contenu["titre"], sp(15), TEXTE, dp(28), couper=True)
+            etiquette(contenu["titre"], sp(15), TEXTE, dp(26), couper=True)
         )
         colonne.add_widget(
             etiquette(
-                f"{contenu['type']} · {contenu['statut']} · "
-                f"Note {note_texte(contenu['note'])}",
+                f"{contenu['type']} · {contenu['statut']}",
                 sp(12),
                 GRIS,
                 dp(20),
@@ -99,11 +93,19 @@ class Carte(BoxLayout):
         )
         colonne.add_widget(
             etiquette(
-                f"{contenu['auteur'] or '—'} · "
-                f"{', '.join(contenu['tags']) or '—'}",
-                sp(12),
+                contenu["informations"] or "—",
+                sp(11.5),
                 GRIS,
-                dp(20),
+                dp(38),
+                couper=True,
+            )
+        )
+        colonne.add_widget(
+            etiquette(
+                contenu["resume"] or "—",
+                sp(11.5),
+                RESUME,
+                dp(38),
                 couper=True,
             )
         )
@@ -186,7 +188,6 @@ class Formulaire(Popup):
         self.application = application
         self.contenu = contenu
 
-        note_initiale = int(contenu["note"]) if contenu else 0
         type_initial = contenu["type"] if contenu else TYPES[0]
         statut_initial = contenu["statut"] if contenu else STATUTS[0]
 
@@ -231,39 +232,21 @@ class Formulaire(Popup):
         ligne.add_widget(colonne_statut)
         champs.add_widget(ligne)
 
-        champs.add_widget(etiquette("Auteur / chaîne / plateforme", sp(12), GRIS, dp(18)))
-        self.champ_auteur = self._entree(contenu["auteur"] if contenu else "")
-        champs.add_widget(self.champ_auteur)
-
-        champs.add_widget(etiquette("Note", sp(12), GRIS, dp(18)))
-        self.texte_note = etiquette(
-            f"Note : {note_texte(note_initiale)}", sp(13), TEXTE, dp(20)
+        champs.add_widget(etiquette("Informations", sp(12), GRIS, dp(18)))
+        self.champ_informations = self._zone(
+            contenu["informations"] if contenu else "",
+            dp(96),
+            "Thèmes, contexte, liens, détails…",
         )
-        champs.add_widget(self.texte_note)
-        self.curseur = Slider(
-            min=0, max=5, step=1, value=note_initiale, size_hint_y=None, height=dp(38)
-        )
-        self.curseur.bind(value=self._changer_note)
-        champs.add_widget(self.curseur)
+        champs.add_widget(self.champ_informations)
 
-        champs.add_widget(etiquette("Tags", sp(12), GRIS, dp(18)))
-        tags_texte = ", ".join(contenu["tags"]) if contenu else ""
-        self.champ_tags = self._entree(tags_texte)
-        champs.add_widget(self.champ_tags)
-
-        champs.add_widget(etiquette("Avis", sp(12), GRIS, dp(18)))
-        self.champ_avis = TextInput(
-            text=(contenu["avis"] if contenu else ""),
-            multiline=True,
-            size_hint_y=None,
-            height=dp(96),
-            font_size=sp(14),
-            background_color=CHAMP,
-            foreground_color=TEXTE,
-            cursor_color=ACCENT,
-            padding=[dp(8), dp(8)],
+        champs.add_widget(etiquette("Résumé", sp(12), GRIS, dp(18)))
+        self.champ_resume = self._zone(
+            contenu["resume"] if contenu else "",
+            dp(180),
+            "Ton résumé en quelques lignes…",
         )
-        champs.add_widget(self.champ_avis)
+        champs.add_widget(self.champ_resume)
 
         self.erreur = etiquette("", sp(12), ROUGE, dp(20))
         champs.add_widget(self.erreur)
@@ -323,8 +306,19 @@ class Formulaire(Popup):
             padding=[dp(8), dp(10)],
         )
 
-    def _changer_note(self, _curseur, valeur):
-        self.texte_note.text = f"Note : {note_texte(int(valeur))}"
+    def _zone(self, texte, hauteur, aide):
+        return TextInput(
+            text=texte,
+            hint_text=aide,
+            multiline=True,
+            size_hint_y=None,
+            height=hauteur,
+            font_size=sp(14),
+            background_color=CHAMP,
+            foreground_color=TEXTE,
+            cursor_color=ACCENT,
+            padding=[dp(8), dp(8)],
+        )
 
     def _enregistrer(self, *_args):
         titre = self.champ_titre.text.strip()
@@ -336,11 +330,9 @@ class Formulaire(Popup):
         donnees = {
             "titre": titre,
             "type": type_choisi if type_choisi in TYPES else TYPES[0],
-            "auteur": self.champ_auteur.text.strip(),
             "statut": statut_choisi if statut_choisi in STATUTS else STATUTS[0],
-            "note": int(self.curseur.value),
-            "tags": normaliser_tags(self.champ_tags.text),
-            "avis": self.champ_avis.text.strip(),
+            "informations": self.champ_informations.text.strip(),
+            "resume": self.champ_resume.text.strip(),
         }
         self.dismiss()
         self.application.enregistrer(donnees, self.contenu)
@@ -383,7 +375,7 @@ class Bibliotheque(App):
         self.racine.add_widget(entete)
 
         self.champ_recherche = TextInput(
-            hint_text="Rechercher (titre, auteur, tag, avis)",
+            hint_text="Rechercher (titre, informations, résumé)",
             multiline=False,
             size_hint_y=None,
             height=dp(46),
@@ -476,9 +468,8 @@ class Bibliotheque(App):
                 texte = " ".join(
                     (
                         contenu["titre"],
-                        contenu["auteur"],
-                        " ".join(contenu["tags"]),
-                        contenu["avis"],
+                        contenu["informations"],
+                        contenu["resume"],
                         contenu["type"],
                         contenu["statut"],
                     )
@@ -511,15 +502,9 @@ class Bibliotheque(App):
     def _maj_stats(self):
         total = len(self.contenus)
         termines = sum(1 for contenu in self.contenus if contenu["statut"] == "Terminé")
-        notes = [contenu["note"] for contenu in self.contenus if contenu["note"] > 0]
-        if notes:
-            moyenne = f"{sum(notes) / len(notes):.1f}".replace(".", ",")
-        else:
-            moyenne = "—"
         self.barre_stats.text = (
             f"{total} contenu{'s' if total != 1 else ''} · "
-            f"{termines} terminé{'s' if termines != 1 else ''} · "
-            f"note moyenne {moyenne}"
+            f"{termines} terminé{'s' if termines != 1 else ''}"
         )
 
     def _ouvrir(self, contenu):

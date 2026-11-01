@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Stockage des contenus de la bibliothèque (sans interface graphique).
 
-Ce module est volontairement pur : il ne dépend pas de Kivy, ce qui permet de
-le tester facilement. Il gère la lecture et l'écriture du fichier JSON.
+Nouveau schéma : titre, type, statut, informations, resume.
+Les anciennes fiches (auteur, note, tags, avis) restent lisibles :
+les tags deviennent le texte d'« informations », l'avis devient le « résumé ».
 """
 
 import json
@@ -15,43 +16,40 @@ TYPES = ["Série", "Article", "Vidéo"]
 STATUTS = ["À voir", "En cours", "Terminé", "Abandonné"]
 
 
-def normaliser_tags(texte):
-    """Transforme « SF, cuisine, SF » en ["SF", "cuisine"] (sans doublon)."""
-    vus = set()
-    tags = []
-    for morceau in texte.split(","):
-        tag = " ".join(morceau.split())
-        if tag and tag.casefold() not in vus:
-            vus.add(tag.casefold())
-            tags.append(tag)
-    return tags
-
-
 def element_normalise(brut):
-    """Nettoie un contenu relu du fichier JSON (valeurs par défaut, bornes)."""
+    """Nettoie un contenu relu du fichier JSON (valeurs par défaut, migration)."""
     if not isinstance(brut, dict):
         return None
     titre = str(brut.get("titre", "")).strip()
     if not titre:
         return None
-    try:
-        note = int(brut.get("note", 0) or 0)
-    except (TypeError, ValueError):
-        note = 0
-    tags = brut.get("tags", [])
-    if not isinstance(tags, list):
-        tags = [str(tags)]
+
     type_contenu = brut.get("type")
     statut = brut.get("statut")
+
+    informations = brut.get("informations")
+    if informations is None:
+        anciens_tags = brut.get("tags", [])
+        if isinstance(anciens_tags, list):
+            informations = ", ".join(
+                str(tag).strip() for tag in anciens_tags if str(tag).strip()
+            )
+        else:
+            informations = str(anciens_tags)
+    informations = str(informations).strip()
+
+    resume = brut.get("resume")
+    if resume is None:
+        resume = brut.get("avis", "")
+    resume = str(resume).strip()
+
     return {
         "id": str(brut.get("id") or uuid.uuid4().hex),
         "titre": titre,
         "type": type_contenu if type_contenu in TYPES else TYPES[0],
-        "auteur": str(brut.get("auteur", "")).strip(),
         "statut": statut if statut in STATUTS else STATUTS[0],
-        "note": max(0, min(5, note)),
-        "tags": [str(tag).strip() for tag in tags if str(tag).strip()],
-        "avis": str(brut.get("avis", "")).strip(),
+        "informations": informations,
+        "resume": resume,
     }
 
 
